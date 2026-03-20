@@ -1,5 +1,5 @@
 name: "Setup Archgate"
-description: "Install the Archgate CLI and add it to PATH. Supports Ubuntu, macOS, and Windows runners. Enforces architecture decisions as code."
+description: "Install the Archgate CLI and add it to PATH. Supports Ubuntu, macOS, and Windows runners."
 author: "Archgate"
 branding:
   icon: "shield"
