@@ -34,6 +34,10 @@ jobs:
       - run: archgate check --ci
 ```
 
+## Community
+
+Questions or feedback? Join [r/archgatedev](https://www.reddit.com/r/archgatedev).
+
 ## License
 
 [Apache 2.0](LICENSE)
