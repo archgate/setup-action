@@ -33,14 +33,17 @@ runs:
     - name: Add Archgate to PATH (Linux/macOS)
       if: runner.os != 'Windows'
       shell: bash
-      run: |
+      # ARCHGATE_INSTALL_DIR is set by the calling workflow, which is already
+      # trusted; putting it on PATH is this action's whole purpose.
+      run: | # zizmor: ignore[github-env]
         install_dir="${ARCHGATE_INSTALL_DIR:-$HOME/.archgate/bin}"
         echo "$install_dir" >> "$GITHUB_PATH"
 
     - name: Add Archgate to PATH (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
-      run: |
+      # As above: the install dir comes from the trusted calling workflow.
+      run: | # zizmor: ignore[github-env]
         $installDir = if ($env:ARCHGATE_INSTALL_DIR) { $env:ARCHGATE_INSTALL_DIR } else { "$HOME\.archgate\bin" }
         echo $installDir >> $env:GITHUB_PATH
 

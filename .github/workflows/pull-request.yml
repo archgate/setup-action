@@ -23,61 +23,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Validate action metadata
-        run: |
-          python3 - <<'PY'
-          import sys, yaml
+      # Workflow syntax, expression and shell checks.
+      - name: actionlint
+        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # v1.7.12
 
-          action = yaml.safe_load(open("action.yml"))
-
-          errors = []
-          for key in ("name", "description", "runs"):
-              if not action.get(key):
-                  errors.append(f"action.yml is missing required key: {key}")
-
-          runs = action.get("runs") or {}
-          if runs.get("using") != "composite":
-              errors.append(f"action.yml runs.using must be 'composite', got {runs.get('using')!r}")
-
-          for i, step in enumerate(runs.get("steps") or []):
-              if "run" in step and not step.get("shell"):
-                  errors.append(f"action.yml step {i} ({step.get('name', 'unnamed')}) has 'run' without 'shell'")
-
-          for e in errors:
-              print(f"::error file=action.yml::{e}")
-          sys.exit(1 if errors else 0)
-          PY
-
-      - name: Verify all actions are pinned to a full commit SHA
-        run: |
-          python3 - <<'PY'
-          import pathlib, re, sys, yaml
-
-          SHA = re.compile(r"^[0-9a-f]{40}$")
-          failures = []
-
-          def check(path, node):
-              if isinstance(node, dict):
-                  uses = node.get("uses")
-                  if isinstance(uses, str) and not uses.startswith(("./", "docker://")):
-                      ref = uses.partition("@")[2]
-                      if not SHA.match(ref):
-                          failures.append(f"{path}: '{uses}' is not pinned to a full commit SHA")
-                  for value in node.values():
-                      check(path, value)
-              elif isinstance(node, list):
-                  for value in node:
-                      check(path, value)
-
-          paths = [pathlib.Path("action.yml"), *sorted(pathlib.Path(".github/workflows").glob("*.yml"))]
-          for path in paths:
-              check(path, yaml.safe_load(path.read_text()))
-
-          for f in failures:
-              print(f"::error::{f}")
-          print(f"Checked {len(paths)} file(s).")
-          sys.exit(1 if failures else 0)
-          PY
+      # Security audit of the workflows and of action.yml. Covers the pinning
+      # rules this repository cares about: unpinned-uses and unpinned-images.
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@70fb788f84895a7701f5643d103d587e460b5c99 # v0.6.3
+        with:
+          advanced-security: false
+          annotations: true
 
   # Gate job — single required status check for the org ruleset.
   status:
@@ -87,9 +43,11 @@ jobs:
     needs: [validate]
     steps:
       - name: Check job results
+        env:
+          VALIDATE_RESULT: ${{ needs.validate.result }}
         run: |
-          if [[ "${{ needs.validate.result }}" != "success" ]]; then
-            echo "::error::Validation failed: ${{ needs.validate.result }}"
+          if [[ "$VALIDATE_RESULT" != "success" ]]; then
+            echo "::error::Validation failed: $VALIDATE_RESULT"
             exit 1
           fi
           echo "All checks passed."
